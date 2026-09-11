@@ -1,22 +1,37 @@
-# Kindle EPUB
+# Kindle Bilingual EPUB Studio 
 
-A zero-dependency Python command-line tool for turning UTF-8 Markdown into Kindle-ready EPUB 3 books. It supports Chinese, English, and bilingual books.
+An automated Python tool that transforms any raw `.txt` or `.zip` text file into a Kindle-ready bilingual EPUB book, featuring real-time translation and a clean **top-English, bottom-Chinese** vertical layout.
 
-## 使用
+## Core Features
+
+* **Universal Input**: No need to manually write Markdown. Directly accepts raw `.txt` files or `.zip` archives containing multi-chapter texts.
+* **Smart Automated Translation**: Powered by a free translation engine, it automatically detects source language and translates paragraphs line-by-line for bilingual comparison.
+* **Vertical Bilingual Layout**: Implements a refined HTML/Markdown hybrid structure to provide a comfortable **top-English, bottom-Chinese** reading experience.
+* **Native EPUB 3 Standards**: Built on pure Python with zero heavy dependencies, ensuring seamless Kindle compatibility.
+
+## Installation & Setup
+
+Ensure Python 3 is installed on your system, then install the required translation library via terminal:
 
 ```bash
-python3 kindle_epub.py build example.md book.epub --title "我的第一本书 || My First Book" --author "作者名 || Author Name" --language bilingual
-python3 kindle_epub.py validate book.epub
+pip3 install deep-translator
+
 ```
 
-Markdown 支持：`#` 或 `##` 章节标题、普通段落、`-`/`*` 无序列表、`**加粗**`、`*斜体*` 和 `> 引用`。使用 `中文 || English` 将两种语言排在同一段中；标题、作者、正文和列表都支持这种格式。
+## Usage
 
-For an English-only book, use `--language en`. For bilingual text, write the Chinese and English versions on one line separated by `||`, then use `--language bilingual`.
+Place the core script (`kindle_epub.py`) and the automation script (`auto_bilingualtranslate.py`) in the same folder, then run the following command in your terminal:
 
-## 设计取舍
+```bash
+python3 auto_bilingualtranslate.py your_book.txt
 
-- 只使用 Python 标准库，不需要安装依赖。
-- `mimetype` 按 EPUB 规范以未压缩方式写入。
-- `validate` 会检查 ZIP、必需文件、OPF XML 和 manifest 引用。
-- `--language` 支持 `zh-CN`、`en` 和 `bilingual`，默认保持中文单语模式。
-- 当前不内置封面图片；Kindle 会使用书名页作为内容首页。
+```
+
+Alternatively, pass in a `.zip` archive:
+
+```bash
+python3 auto_bilingualtranslate.py your_chapters.zip
+
+```
+
+Once execution completes, a polished `yourbook__bilingual.epub` file will be generated in your directory, ready to be transferred straight to your Kindle.
