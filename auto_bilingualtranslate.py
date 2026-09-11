@@ -4,12 +4,12 @@ import zipfile
 import tempfile
 import subprocess
 import glob
+import time
 from deep_translator import GoogleTranslator
 
 def translate_and_stack(raw_text):
     """
-    2026 优化版：自动检测语言并翻译，实现【上面英文、下面中文】的垂直双语排版
-    增加了智能分段与防报错机制
+    2026.2 修复版：加入防封禁延迟与错误过滤，彻底杜绝 Error 500 污染文本
     """
     lines = raw_text.splitlines()
     md_lines = []
@@ -19,7 +19,7 @@ def translate_and_stack(raw_text):
     is_mostly_chinese = han_count > 10
 
     target_lang = 'en' if is_mostly_chinese else 'zh-CN'
-    print(f"🌍 2026 智能引擎启动: 检测到 {'中文 (将生成英文对照)' if is_mostly_chinese else '英文 (将生成中文对照)'} 模式...")
+    print(f"🌍 智能引擎启动: 检测到 {'中文 (将生成英文对照)' if is_mostly_chinese else '英文 (将生成中文对照)'} 模式...")
     
     translator = GoogleTranslator(source='auto', target=target_lang)
 
@@ -41,23 +41,29 @@ def translate_and_stack(raw_text):
             md_lines.append(f"\n# {original_line}\n")
             continue
             
-        # 实时打印进度提示
         print(f"[{current_count}/{total_lines}] 正在翻译: {original_line[:30]}...")
 
+        translated = ""
         try:
-            # 限制单次翻译长度，防止超限
+            # 限制单次翻译长度
             translated = translator.translate(original_line[:4900])
-            if translated:
-                if is_mostly_chinese:
-                    # 2026 精细排版：上面英文，下面中文，中间留出舒适间距
-                    md_lines.append(f"<p><b>{translated}</b><br/>{original_line}</p>\n")
-                else:
-                    md_lines.append(f"<p><b>{original_line}</b><br/>{translated}</p>\n")
+            # 检查是否误触发了谷歌的错误提示页面
+            if not translated or "Error 500" in translated or "That’s an error" in translated:
+                translated = ""
+        except Exception:
+            translated = ""
+
+        # 智能组合：如果翻译成功则双语对照，失败则仅保留原文，绝不写入报错代码
+        if translated:
+            if is_mostly_chinese:
+                md_lines.append(f"<p><b>{translated}</b><br/>{original_line}</p>\n")
             else:
-                md_lines.append(f"<p>{original_line}</p>\n")
-        except Exception as e:
-            print(f"⚠️ 这一行翻译跳过: {e}")
+                md_lines.append(f"<p><b>{original_line}</b><br/>{translated}</p>\n")
+        else:
             md_lines.append(f"<p>{original_line}</p>\n")
+            
+        # 每次请求后暂停 0.3 秒，防止触发免费接口频率限制
+        time.sleep(0.3)
             
     return "".join(md_lines)
 
@@ -67,7 +73,7 @@ def process_input(input_path):
         return
 
     base_name = os.path.splitext(os.path.basename(input_path))[0]
-    output_epub = f"{base_name}_2026_bilingual.epub"
+    output_epub = f"{base_name}_fixed_bilingual.epub"
     ext = os.path.splitext(input_path)[1].lower()
 
     temp_dir = tempfile.mkdtemp()
@@ -101,16 +107,16 @@ def process_input(input_path):
             print(f"❌ 不支持的文件格式: {ext}")
             return
 
-        print(f"📚 正在打包生成 2026 版双语 EPUB: {output_epub}")
+        print(f"📚 正在打包生成修复版 EPUB: {output_epub}")
         cmd = [
             sys.executable, "kindle_epub.py", "build", 
             md_file_path, output_epub, 
-            "--title", f"{base_name} (2026双语版)", 
-            "--author", "智能双语助手",
+            "--title", f"{base_name} (双语版)", 
+            "--author", "未知作者",
             "--language", "bilingual"
         ]
         subprocess.run(cmd, check=True)
-        print(f"✨ 转换大功告成！文件已保存在下载目录: {output_epub}")
+        print(f"✨ 转换成功！文件已保存在下载目录: {output_epub}")
 
     except Exception as e:
         print(f"❌ 转换过程中出错: {e}")
